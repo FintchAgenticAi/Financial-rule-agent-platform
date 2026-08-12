@@ -1,74 +1,45 @@
+import asyncio
 import pandas as pd
 
-from src.config import create_llm
+from src.config import create_llm, create_mcp_clients
 from src.state import PlatformState
 from src.utils.json_tools import load_json_file
 from src.workflows.graph import build_graph
 
 
-def main() -> None:
-    print(
-        "\nFinancial Data Rule Selection Platform"
-    )
-    print(
-        "--------------------------------------"
-    )
+async def run_app() -> None:
+    dataset_path = input("Enter CSV path [sample_financial_data.csv]: ").strip() or "data/sample_financial_data.csv"
 
-    dataset_path = input(
-        "Enter CSV path "
-        "[sample_financial_data.csv]: "
-    ).strip()
+    clients = create_mcp_clients()
 
-    if not dataset_path:
-        dataset_path = "data/sample_financial_data.csv"
+    # initial fetch concurrently
+    await asyncio.gather(*(c.fetch_rules() for c in clients.values()))
+
+    # start background polling
+    for c in clients.values():
+        c.start_polling(interval=30.0)
 
     initial_state: PlatformState = {
         "dataset_path": dataset_path,
-
-        "transformation_catalog": load_json_file(
-            "rules/transformation_rules.json"
-        ),
-
-        "validation_catalog": load_json_file(
-            "rules/validation_rules.json"
-        ),
-
-        "deduplication_catalog": load_json_file(
-            "rules/deduplication_rules.json"
-        )
+        "transformation_catalog": clients["transformation"].get_cached(),
+        "validation_catalog": clients["validation"].get_cached(),
+        "deduplication_catalog": clients["deduplication"].get_cached(),
     }
 
     llm = create_llm()
     application = build_graph(llm)
 
     try:
-        result = application.invoke(initial_state)
+        result = await asyncio.to_thread(application.invoke, initial_state)
 
         print("\nWorkflow completed successfully.")
 
-        selected = result[
-            "final_result"
-        ]["selected_rules"]
+        selected = result["final_result"]["selected_rules"]
 
-        print(
-            "Transformation rules:",
-            len(selected["transformation"])
-        )
-
-        print(
-            "Validation rules:",
-            len(selected["validation"])
-        )
-
-        print(
-            "Deduplication rules:",
-            len(selected["deduplication"])
-        )
-
-        print(
-            "\nOpen outputs/selected_rules.json "
-            "to view the complete result."
-        )
+        print("Transformation rules:", len(selected["transformation"]))
+        print("Validation rules:", len(selected["validation"]))
+        print("Deduplication rules:", len(selected["deduplication"]))
+        print("\nOpen outputs/selected_rules.json to view the complete result.")
 
     except FileNotFoundError as error:
         print(f"\nFile error: {error}")
@@ -82,6 +53,9 @@ def main() -> None:
     except Exception as error:
         print(f"\nUnexpected error: {error}")
 
+    finally:
+        await asyncio.gather(*(c.close() for c in clients.values()))
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(run_app())
