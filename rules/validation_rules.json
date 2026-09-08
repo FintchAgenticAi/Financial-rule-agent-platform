@@ -1,0 +1,48 @@
+[
+  {
+    "rule_id": "VR-001",
+    "name": "Required-value validation",
+    "description": "Reject or flag missing values in required columns.",
+    "applicable_to": ["all"],
+    "parameters": {
+      "allow_null": false
+    }
+  },
+  {
+    "rule_id": "VR-002",
+    "name": "Positive financial value validation",
+    "description": "Check that financial price values are greater than zero.",
+    "applicable_to": ["stock_price", "price"],
+    "parameters": {
+      "minimum": 0,
+      "exclusive": true
+    }
+  },
+  {
+    "rule_id": "VR-003",
+    "name": "Valid date validation",
+    "description": "Check whether date values can be parsed as valid dates.",
+    "applicable_to": ["date"],
+    "parameters": {
+      "reject_invalid": true
+    }
+  },
+  {
+    "rule_id": "VR-004",
+    "name": "Currency-code validation",
+    "description": "Check whether currency values use supported ISO-style codes.",
+    "applicable_to": ["currency"],
+    "parameters": {
+      "allowed_values": ["USD", "EUR", "GBP", "JPY", "LKR"]
+    }
+  },
+  {
+    "rule_id": "VR-005",
+    "name": "Financial range validation",
+    "description": "Flag unusually large or negative financial values for review.",
+    "applicable_to": ["numeric"],
+    "parameters": {
+      "manual_review": true
+    }
+  }
+]
