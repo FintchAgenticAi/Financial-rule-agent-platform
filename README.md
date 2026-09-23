@@ -15,7 +15,7 @@ The application performs the following steps:
    - validation rules
    - deduplication rules
 4. Runs a LangGraph workflow that selects suitable rules with LLM agents.
-5. Writes the final approved-style result to outputs/selected_rules.json.
+5. Writes selected transformation, validation, and deduplication rules to separate JSON files in the outputs folder.
 
 ## Core workflow
 
@@ -94,21 +94,23 @@ data/sample_financial_data.csv
 
 ## Example output
 
-The workflow generates a final package in outputs/selected_rules.json with structure similar to:
+The workflow generates three files in the outputs folder:
+
+- `selected_transformation_rules.json`
+- `selected_validation_rules.json`
+- `selected_deduplication_rules.json`
+
+Each file contains the selected rules for one category, for example:
 
 ```json
-{
-  "status": "completed",
-  "dataset": "sample_financial_data.csv",
-  "dataset_profile": { ... },
-  "selected_rules": {
-    "transformation": [ ... ],
-    "validation": [ ... ],
-    "deduplication": [ ... ]
-  },
-  "execution_status": "not_executed",
-  "requires_approval": true
-}
+[
+  {
+    "rule": { ... },
+    "recommended_columns": ["column_name"],
+    "reason": "Why the rule is relevant",
+    "confidence": 0.90
+  }
+]
 ```
 
 The app does not modify the dataset itself; it only prepares a rule recommendation package for approval.
@@ -136,7 +138,7 @@ Before saving the output, the code validates that every selected rule ID exists 
 
 - The platform current version is a rule recommendation engine, not a data transformation executor.
 - It uses mock or MCP-style JSON catalogs rather than direct database integration.
-- The selected rules are saved to disk as reviewable output, but the execution_status remains not_executed until a later approval/execution phase is implemented.
+- The selected rules are saved to separate files as reviewable output, but they are not executed against the dataset.
 - The app handles common CSV issues such as missing files or invalid CSV parsing errors.
 
 ## Default sample dataset

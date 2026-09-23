@@ -1,0 +1,24 @@
+[
+  {
+    "rule": {
+      "rule_id": "DR-002",
+      "name": "Composite-key duplicate detection",
+      "description": "Identify duplicates using selected business-key columns.",
+      "applicable_to": [
+        "structured_data"
+      ],
+      "parameters": {
+        "candidate_keys": [
+          "company_name",
+          "transaction_date"
+        ]
+      }
+    },
+    "recommended_columns": [
+      "company_name",
+      "transaction_date"
+    ],
+    "reason": "The 'company_name' and 'transaction_date' columns are selected as candidate keys for duplicate detection.",
+    "confidence": 0.85
+  }
+]

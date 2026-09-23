@@ -36,21 +36,29 @@ def create_final_result(
     output_folder = Path("outputs")
     output_folder.mkdir(exist_ok=True)
 
-    output_path = output_folder / "selected_rules.json"
+    selected_rule_files = {
+        "transformation": "selected_transformation_rules.json",
+        "validation": "selected_validation_rules.json",
+        "deduplication": "selected_deduplication_rules.json",
+    }
 
-    with output_path.open(
-        "w",
-        encoding="utf-8"
-    ) as file:
-        json.dump(
-            final_result,
-            file,
-            indent=2,
-            ensure_ascii=False
-        )
+    for category, file_name in selected_rule_files.items():
+        output_path = output_folder / file_name
+
+        with output_path.open(
+            "w",
+            encoding="utf-8"
+        ) as file:
+            json.dump(
+                final_result["selected_rules"][category],
+                file,
+                indent=2,
+                ensure_ascii=False
+            )
+
+        print(f"Saved to: {output_path.resolve()}")
 
     print("[5/5] Final rule package created.")
-    print(f"Saved to: {output_path.resolve()}")
 
     return {
         "final_result": final_result
