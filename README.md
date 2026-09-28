@@ -64,11 +64,15 @@ Each catalog contains rules with IDs, descriptions, applicable data types, and p
    ```
 
 3. Ensure Ollama is installed and running locally.
-4. Make sure the model used by the app is available. The project currently configures:
+4. Pull the local models you want to compare:
 
-   ```python
-   ChatOllama(model="llama3.2", temperature=0)
+    ```bash
+    ollama pull llama3.2
+    ollama pull qwen3.5:4b
    ```
+
+    The application offers both models at startup. Select either the displayed
+    number or the model name, then the normal workflow runs with that model.
 
 5. Start local services for the MCP rule endpoints if you are using the external catalog pattern. The default environment variables are:
 
@@ -86,7 +90,16 @@ From the project root, run:
 python -m src.main
 ```
 
-You will be prompted to enter a CSV path. If you leave it empty, the app uses:
+The app first displays the registered local LLM strategies:
+
+```text
+Available local LLMs:
+  1. Llama 3.2 (llama3.2)
+  2. Qwen 3.5 (4B) (qwen3.5:4b)
+Select an LLM [1]:
+```
+
+After selecting a model, you will be prompted to enter a CSV path. If you leave it empty, the app uses:
 
 ```text
 data/sample_financial_data.csv

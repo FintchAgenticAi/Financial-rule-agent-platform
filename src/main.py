@@ -2,8 +2,9 @@ import asyncio
 import pandas as pd
 import httpx
 
-from src.config import create_llm, create_mcp_clients
+from src.config import create_llm, create_mcp_clients, get_llm_strategies
 from src.state import PlatformState
+from src.strategies.llm import LLMStrategy
 from src.utils.json_tools import load_json_file
 from src.workflows.graph import build_graph
 
@@ -25,7 +26,31 @@ async def load_catalog(
         return load_json_file(local_path), False
 
 
+def select_llm_strategy() -> LLMStrategy:
+    strategies = get_llm_strategies()
+    strategy_list = list(strategies.values())
+
+    print("Available local LLMs:")
+    for index, strategy in enumerate(strategy_list, start=1):
+        print(f"  {index}. {strategy.display_name} ({strategy.key})")
+
+    while True:
+        choice = input("Select an LLM [1]: ").strip() or "1"
+
+        if choice.isdigit() and 1 <= int(choice) <= len(strategy_list):
+            return strategy_list[int(choice) - 1]
+
+        if choice in strategies:
+            return strategies[choice]
+
+        print("Invalid selection. Enter a listed number or model name.")
+
+
 async def run_app() -> None:
+    selected_strategy = select_llm_strategy()
+    llm = create_llm(selected_strategy)
+    print(f"Using {selected_strategy.display_name} ({selected_strategy.key}).")
+
     dataset_path = input("Enter CSV path [sample_financial_data.csv]: ").strip() or "data/sample_financial_data.csv"
 
     clients = create_mcp_clients()
@@ -64,7 +89,6 @@ async def run_app() -> None:
         "deduplication_catalog": catalogs["deduplication"],
     }
 
-    llm = create_llm()
     application = build_graph(llm)
 
     try:

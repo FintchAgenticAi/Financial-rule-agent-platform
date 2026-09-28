@@ -6,13 +6,27 @@ from langchain_ollama import ChatOllama
 from src.mcp_clients.transformation import TransformationMCPClient
 from src.mcp_clients.validation import ValidationMCPClient
 from src.mcp_clients.deduplication import DeduplicationMCPClient
+from src.strategies.llm import (
+    LLMContext,
+    LLMStrategy,
+    Llama32Strategy,
+    Qwen35Strategy,
+)
 
 
-def create_llm() -> ChatOllama:
-    return ChatOllama(
-        model="llama3.2",
-        temperature=0
-    )
+def get_llm_strategies() -> Dict[str, LLMStrategy]:
+    """Return the local LLM strategies available to the application."""
+    strategies = [
+        Llama32Strategy(),
+        Qwen35Strategy(),
+    ]
+    return {strategy.key: strategy for strategy in strategies}
+
+
+def create_llm(strategy: LLMStrategy | None = None) -> ChatOllama:
+    """Create an LLM through the selected strategy, defaulting to Llama 3.2."""
+    context = LLMContext(strategy or Llama32Strategy())
+    return context.create_llm()
 
 
 def create_mcp_clients() -> Dict[str, object]:
