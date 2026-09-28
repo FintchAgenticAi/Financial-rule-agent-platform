@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +53,15 @@ def profile_dataset(state: PlatformState) -> PlatformState:
         ),
         "columns": column_profiles
     }
+
+    output_folder = Path("outputs")
+    output_folder.mkdir(exist_ok=True)
+
+    output_path = output_folder / "dataset_profile.json"
+    with output_path.open("w", encoding="utf-8") as file:
+        json.dump(profile, file, indent=2, ensure_ascii=False)
+
+    print(f"Saved dataset profile to: {output_path.resolve()}")
 
     print("[1/5] Dataset profiling completed.")
 
