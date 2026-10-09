@@ -1,0 +1,72 @@
+{
+  "file_name": "sample_financial_data.csv",
+  "row_count": 6,
+  "column_count": 5,
+  "duplicate_row_count": 1,
+  "columns": [
+    {
+      "column_name": "company_name",
+      "pandas_type": "str",
+      "missing_count": 0,
+      "unique_count": 4,
+      "sample_values": [
+        "Apple Inc",
+        " APPLE INC ",
+        "Tesla",
+        "Tesla",
+        "Microsoft"
+      ]
+    },
+    {
+      "column_name": "transaction_date",
+      "pandas_type": "str",
+      "missing_count": 1,
+      "unique_count": 4,
+      "sample_values": [
+        "2026-01-05",
+        "05/02/2026",
+        "2026-01-07",
+        "2026-01-08",
+        "2026-01-08"
+      ]
+    },
+    {
+      "column_name": "stock_price",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 5,
+      "sample_values": [
+        "185.5",
+        "187.2",
+        "-10.0",
+        "245.3",
+        "420.75"
+      ]
+    },
+    {
+      "column_name": "currency",
+      "pandas_type": "str",
+      "missing_count": 0,
+      "unique_count": 3,
+      "sample_values": [
+        "usd",
+        "USD",
+        "usd",
+        "USD",
+        "eur"
+      ]
+    },
+    {
+      "column_name": "revenue",
+      "pandas_type": "float64",
+      "missing_count": 2,
+      "unique_count": 3,
+      "sample_values": [
+        "1200000.0",
+        "1250000.0",
+        "900000.0",
+        "900000.0"
+      ]
+    }
+  ]
+}

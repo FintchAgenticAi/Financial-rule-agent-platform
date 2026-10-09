@@ -1,0 +1,7 @@
+company_name,transaction_date,stock_price,currency,revenue
+Apple Inc,2026-01-05,185.50,usd,1200000
+ APPLE INC ,05/02/2026,187.20,USD,1250000
+Tesla,2026-01-07,-10.00,usd,900000
+Tesla,,245.30,USD,900000
+Microsoft,2026-01-08,420.75,eur,
+Microsoft,2026-01-08,420.75,eur,
