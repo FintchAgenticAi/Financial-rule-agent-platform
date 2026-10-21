@@ -16,9 +16,15 @@ def create_llm() -> ChatOllama:
 
 
 def create_mcp_clients() -> Dict[str, object]:
-    transform_url = os.environ.get("TRANSFORMATION_MCP_URL", "http://localhost:8001")
-    validate_url = os.environ.get("VALIDATION_MCP_URL", "http://localhost:8002")
-    dedup_url = os.environ.get("DEDUPLICATION_MCP_URL", "http://localhost:8003")
+    transform_url = os.environ.get(
+        "TRANSFORMATION_MCP_URL", "http://10.23.1.35:8010/mcp"
+    )
+    validate_url = os.environ.get(
+        "VALIDATION_MCP_URL", "http://127.0.0.1:8030/mcp"
+    )
+    dedup_url = os.environ.get(
+        "DEDUPLICATION_MCP_URL", "http://127.0.0.1:8000/mcp"
+    )
 
     return {
         "transformation": TransformationMCPClient(transform_url, "transformation"),

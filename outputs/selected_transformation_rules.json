@@ -1,60 +1,6 @@
 [
   {
     "rule": {
-      "rule_id": "TR-001",
-      "name": "Trim text whitespace",
-      "description": "Remove leading and trailing spaces from text values.",
-      "applicable_to": [
-        "text"
-      ],
-      "parameters": {
-        "operation": "trim"
-      }
-    },
-    "recommended_columns": [
-      "company_name"
-    ],
-    "reason": "The 'company_name' column contains text values with leading and trailing spaces, which can be removed using the 'Trim text whitespace' rule.",
-    "confidence": 0.9
-  },
-  {
-    "rule": {
-      "rule_id": "TR-003",
-      "name": "Uppercase currency codes",
-      "description": "Convert currency codes such as usd and eur to uppercase.",
-      "applicable_to": [
-        "currency"
-      ],
-      "parameters": {
-        "operation": "uppercase"
-      }
-    },
-    "recommended_columns": [
-      "currency"
-    ],
-    "reason": "The 'currency' column contains text values with mixed case, which can be standardized using the 'Uppercase currency codes' rule.",
-    "confidence": 0.8
-  },
-  {
-    "rule": {
-      "rule_id": "TR-004",
-      "name": "Standardize date format",
-      "description": "Convert supported dates to YYYY-MM-DD.",
-      "applicable_to": [
-        "date"
-      ],
-      "parameters": {
-        "target_format": "YYYY-MM-DD"
-      }
-    },
-    "recommended_columns": [
-      "transaction_date"
-    ],
-    "reason": "The 'transaction_date' column contains text values in mixed date formats, which can be standardized using the 'Standardize date format' rule.",
-    "confidence": 0.85
-  },
-  {
-    "rule": {
       "rule_id": "TR-005",
       "name": "Convert numeric strings",
       "description": "Convert numeric text values into decimal numbers.",
@@ -66,9 +12,9 @@
       }
     },
     "recommended_columns": [
-      "stock_price"
+      "column_name"
     ],
-    "reason": "The 'stock_price' column contains text values that can be converted to decimal numbers using the 'Convert numeric strings' rule.",
-    "confidence": 0.95
+    "reason": "The 'Convert numeric strings' rule is relevant because the 'Revenue ($B)', 'Earnings ($B)', 'Dividend (stock split adjusted) ($)', 'Net assets ($B)', 'Total assets ($B)', and 'Total debt ($B)' columns contain numeric text values that need to be converted into decimal numbers.",
+    "confidence": 0.9
   }
 ]

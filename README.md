@@ -70,13 +70,13 @@ Each catalog contains rules with IDs, descriptions, applicable data types, and p
    ChatOllama(model="llama3.2", temperature=0)
    ```
 
-5. Start local services for the MCP rule endpoints if you are using the external catalog pattern. The default environment variables are:
+5. Make the MCP rule services available before starting the application. The default endpoints are:
 
-   - TRANSFORMATION_MCP_URL = http://localhost:8001
-   - VALIDATION_MCP_URL = http://localhost:8002
-   - DEDUPLICATION_MCP_URL = http://localhost:8003
+  - TRANSFORMATION_MCP_URL = http://192.168.8.116:8010/mcp
+  - VALIDATION_MCP_URL = http://127.0.0.1:8030/mcp
+  - DEDUPLICATION_MCP_URL = http://127.0.0.1:8000/mcp
 
-   The app will still initialize with these defaults if the environment variables are not set.
+  The transformation service is on the computer at `192.168.8.116`. The validation and deduplication services are expected on the same computer as this application (`127.0.0.1`). Set the environment variables before running if these locations differ.
 
 ## Running the application
 
@@ -85,6 +85,15 @@ From the project root, run:
 ```bash
 python -m src.main
 ```
+
+The application then:
+
+1. Requests each rule catalog from its MCP endpoint. If an endpoint is unavailable, it uses the matching file in `rules/`.
+2. Reads and profiles the selected CSV file.
+3. Sends the profile and catalogs to the local Ollama `llama3.2` model through the three selector agents.
+4. Writes the selected rules to the three JSON files in `outputs/`.
+
+The computer running this project is the client/orchestrator. It reads the CSV, calls the MCP services, runs Ollama and the LangGraph workflow, and writes the output files. The computer at `192.168.8.116` only provides the transformation catalog endpoint; it must be reachable over the network, and its firewall must allow port `8010`.
 
 You will be prompted to enter a CSV path. If you leave it empty, the app uses:
 

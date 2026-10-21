@@ -1,24 +1,20 @@
 [
   {
     "rule": {
-      "rule_id": "DR-002",
-      "name": "Composite-key duplicate detection",
-      "description": "Identify duplicates using selected business-key columns.",
+      "rule_id": "DR-001",
+      "name": "Exact-row duplicate detection",
+      "description": "Identify records where every column value is identical.",
       "applicable_to": [
-        "structured_data"
+        "all"
       ],
       "parameters": {
-        "candidate_keys": [
-          "company_name",
-          "transaction_date"
-        ]
+        "comparison": "exact"
       }
     },
     "recommended_columns": [
-      "company_name",
-      "transaction_date"
+      "column_name"
     ],
-    "reason": "The 'company_name' and 'transaction_date' columns are selected as candidate keys for duplicate detection.",
-    "confidence": 0.85
+    "reason": "The 'Exact-row duplicate detection' rule is relevant because the dataset contains a single duplicate row.",
+    "confidence": 0.9
   }
 ]

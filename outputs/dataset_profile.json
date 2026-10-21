@@ -1,71 +1,228 @@
 {
   "file_name": "sample_financial_data.csv",
-  "row_count": 6,
-  "column_count": 5,
+  "row_count": 38,
+  "column_count": 17,
   "duplicate_row_count": 1,
   "columns": [
     {
-      "column_name": "company_name",
+      "column_name": "Year",
       "pandas_type": "str",
       "missing_count": 0,
-      "unique_count": 4,
+      "unique_count": 36,
       "sample_values": [
-        "Apple Inc",
-        " APPLE INC ",
-        "Tesla",
-        "Tesla",
-        "Microsoft"
+        "1990",
+        "1991",
+        "1992",
+        "FY 1993",
+        "1994"
       ]
     },
     {
-      "column_name": "transaction_date",
-      "pandas_type": "str",
-      "missing_count": 1,
-      "unique_count": 4,
-      "sample_values": [
-        "2026-01-05",
-        "05/02/2026",
-        "2026-01-07",
-        "2026-01-08",
-        "2026-01-08"
-      ]
-    },
-    {
-      "column_name": "stock_price",
+      "column_name": "Market cap ($B)",
       "pandas_type": "float64",
       "missing_count": 0,
-      "unique_count": 5,
+      "unique_count": 36,
       "sample_values": [
-        "185.5",
-        "187.2",
-        "-10.0",
-        "245.3",
-        "420.75"
+        "11.53",
+        "11.91",
+        "12.26",
+        "12.95",
+        "13.38"
       ]
     },
     {
-      "column_name": "currency",
+      "column_name": "Revenue ($B)",
       "pandas_type": "str",
       "missing_count": 0,
-      "unique_count": 3,
+      "unique_count": 37,
       "sample_values": [
-        "usd",
-        "USD",
-        "usd",
-        "USD",
-        "eur"
+        "8.7",
+        "8.99",
+        "9.26",
+        "9.78",
+        "10.11"
       ]
     },
     {
-      "column_name": "revenue",
-      "pandas_type": "float64",
-      "missing_count": 2,
-      "unique_count": 3,
+      "column_name": "Earnings ($B)",
+      "pandas_type": "str",
+      "missing_count": 0,
+      "unique_count": 36,
       "sample_values": [
-        "1200000.0",
-        "1250000.0",
-        "900000.0",
-        "900000.0"
+        "0.28",
+        "0.3",
+        "0.32",
+        "0.36",
+        "0.38"
+      ]
+    },
+    {
+      "column_name": "P/E ratio",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 36,
+      "sample_values": [
+        "40.58",
+        "39.27",
+        "38.15",
+        "36.12",
+        "34.95"
+      ]
+    },
+    {
+      "column_name": "P/S ratio",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 21,
+      "sample_values": [
+        "1.32",
+        "1.32",
+        "1.32",
+        "1.32",
+        "1.32"
+      ]
+    },
+    {
+      "column_name": "P/B ratio",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 22,
+      "sample_values": [
+        "1.98",
+        "1.98",
+        "1.98",
+        "1.98",
+        "1.98"
+      ]
+    },
+    {
+      "column_name": "Operating Margin (%)",
+      "pandas_type": "str",
+      "missing_count": 0,
+      "unique_count": 36,
+      "sample_values": [
+        "3.26",
+        "3.37",
+        "3.47",
+        "3.67",
+        "3.79"
+      ]
+    },
+    {
+      "column_name": "EPS ($)",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 36,
+      "sample_values": [
+        "0.4",
+        "0.41",
+        "0.42",
+        "0.44",
+        "0.46"
+      ]
+    },
+    {
+      "column_name": "Shares Outstanding (B)",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 26,
+      "sample_values": [
+        "0.72",
+        "0.74",
+        "0.76",
+        "0.81",
+        "0.83"
+      ]
+    },
+    {
+      "column_name": "Cash on Hand ($B)",
+      "pandas_type": "str",
+      "missing_count": 0,
+      "unique_count": 34,
+      "sample_values": [
+        "0.19",
+        "0.19",
+        "0.2",
+        "0.21",
+        "0.22"
+      ]
+    },
+    {
+      "column_name": "Dividend Yield (%)",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 36,
+      "sample_values": [
+        "0.84",
+        "0.87",
+        "0.9",
+        "0.95",
+        "0.98"
+      ]
+    },
+    {
+      "column_name": "Dividend (stock split adjusted) ($)",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 32,
+      "sample_values": [
+        "0.14",
+        "0.14",
+        "0.14",
+        "0.15",
+        "0.16"
+      ]
+    },
+    {
+      "column_name": "Net assets ($B)",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 36,
+      "sample_values": [
+        "5.82",
+        "6.01",
+        "6.19",
+        "6.53",
+        "6.75"
+      ]
+    },
+    {
+      "column_name": "Total assets ($B)",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 36,
+      "sample_values": [
+        "13.55",
+        "14.0",
+        "14.41",
+        "15.22",
+        "15.73"
+      ]
+    },
+    {
+      "column_name": "Total debt ($B)",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 36,
+      "sample_values": [
+        "5.64",
+        "5.82",
+        "5.99",
+        "6.33",
+        "6.54"
+      ]
+    },
+    {
+      "column_name": "Total liabilities ($B)",
+      "pandas_type": "float64",
+      "missing_count": 0,
+      "unique_count": 36,
+      "sample_values": [
+        "7.73",
+        "7.99",
+        "8.23",
+        "8.69",
+        "8.98"
       ]
     }
   ]
