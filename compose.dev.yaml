@@ -1,0 +1,11 @@
+services:
+  financial-rule-agent:
+    volumes:
+      - type: bind
+        source: ./src
+        target: /app/src
+        read_only: true
+      - type: bind
+        source: ./rules
+        target: /app/rules
+        read_only: true

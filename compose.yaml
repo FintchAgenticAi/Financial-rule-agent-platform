@@ -1,0 +1,18 @@
+services:
+  financial-rule-agent:
+    image: financial-rule-agent:1.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+    volumes:
+      - type: bind
+        source: ./data
+        target: /app/data
+        read_only: true
+      - type: bind
+        source: ./outputs
+        target: /app/outputs

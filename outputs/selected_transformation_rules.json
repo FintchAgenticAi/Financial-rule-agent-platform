@@ -1,0 +1,20 @@
+[
+  {
+    "rule": {
+      "rule_id": "TR-005",
+      "name": "Convert numeric strings",
+      "description": "Convert numeric text values into decimal numbers.",
+      "applicable_to": [
+        "numeric"
+      ],
+      "parameters": {
+        "target_type": "decimal"
+      }
+    },
+    "recommended_columns": [
+      "column_name"
+    ],
+    "reason": "The 'Convert numeric strings' rule is relevant because the 'Revenue ($B)', 'Earnings ($B)', 'Dividend (stock split adjusted) ($)', 'Net assets ($B)', 'Total assets ($B)', and 'Total debt ($B)' columns contain numeric text values that need to be converted into decimal numbers.",
+    "confidence": 0.9
+  }
+]
