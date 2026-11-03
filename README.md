@@ -72,11 +72,11 @@ Each catalog contains rules with IDs, descriptions, applicable data types, and p
 
 5. Make the MCP rule services available before starting the application. The default endpoints are:
 
-  - TRANSFORMATION_MCP_URL = http://192.168.8.116:8010/mcp
-  - VALIDATION_MCP_URL = http://127.0.0.1:8030/mcp
-  - DEDUPLICATION_MCP_URL = http://127.0.0.1:8000/mcp
+  - TRANSFORMATION_MCP_URL = http://10.23.1.35:8010/mcp
+  - VALIDATION_MCP_URL = http://VALIDATION_SERVER_IP:8030/mcp
+  - DEDUPLICATION_MCP_URL = http://DEDUPLICATION_SERVER_IP:8000/mcp
 
-  The transformation service is on the computer at `192.168.8.116`. The validation and deduplication services are expected on the same computer as this application (`127.0.0.1`). Set the environment variables before running if these locations differ.
+  The transformation service is configured in the current code as `10.23.1.35:8010`. Replace the validation and deduplication placeholders with the actual remote server addresses. Set the environment variables before running if these locations differ.
 
 ## Running the application
 
@@ -93,7 +93,7 @@ The application then:
 3. Sends the profile and catalogs to the local Ollama `llama3.2` model through the three selector agents.
 4. Writes the selected rules to the three JSON files in `outputs/`.
 
-The computer running this project is the client/orchestrator. It reads the CSV, calls the MCP services, runs Ollama and the LangGraph workflow, and writes the output files. The computer at `192.168.8.116` only provides the transformation catalog endpoint; it must be reachable over the network, and its firewall must allow port `8010`.
+The computer running this project is the client/orchestrator. It reads the CSV, calls the MCP services, runs Ollama and the LangGraph workflow, and writes the output files. The computer at `10.23.1.35` only provides the transformation catalog endpoint; it must be reachable over the network, and its firewall must allow port `8010`.
 
 You will be prompted to enter a CSV path. If you leave it empty, the app uses:
 
@@ -153,6 +153,292 @@ Before saving the output, the code validates that every selected rule ID exists 
 ## Default sample dataset
 
 The sample financial dataset in data/sample_financial_data.csv contains examples like company names, transaction dates, prices, currencies, and revenue values to test validation and transformation recommendations.
+
+## Docker Deployment
+
+The Docker image packages the Python application and the fallback rule catalogs. Ollama and all MCP servers remain external services; they are not installed or started by the image. The container runs the existing interactive CLI entry point:
+
+```text
+python -m src.main
+```
+
+The container is not an HTTP API and does not expose a port.
+
+### Prerequisites
+
+Install the following on the computer that will run the container:
+
+- Docker Desktop with the Linux container engine enabled.
+- Git, if cloning the repository.
+- Ollama running on the Docker host.
+- Network access from Docker Desktop to the Ollama host and the three remote MCP laptops.
+- The repository's `data/` and `outputs/` directories.
+
+The Dockerfile uses the official `python:3.14-slim` image. It installs the pinned dependencies in `requirements.txt`, runs as the non-root `appuser` (UID `10001`), and starts the CLI with `python -m src.main`.
+
+### Install Docker Desktop on Windows
+
+1. Download Docker Desktop from [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2. Install it with the recommended WSL 2 backend.
+3. Start Docker Desktop and wait until the engine reports that it is running.
+4. Verify the installation in PowerShell:
+
+   ```powershell
+   docker --version
+   docker compose version
+   ```
+
+5. If Docker Desktop asks for file-sharing permission, allow access to the drive containing this repository. Compose bind mounts require access to `data/`, `outputs/`, and, for development, `src/` and `rules/`.
+
+### Install and prepare Ollama
+
+Install Ollama on the same Windows laptop that runs Docker Desktop. Pull the configured model and verify it locally:
+
+```powershell
+ollama pull llama3.2
+ollama list
+```
+
+The container reaches host Ollama through:
+
+```text
+http://host.docker.internal:11434
+```
+
+This value is configured in `.env` as `OLLAMA_BASE_URL`. `host.docker.internal` is required because `localhost` inside a container refers to the container itself, not the Windows host.
+
+### Configure the external MCP servers
+
+The application has three independent HTTP MCP clients. Each configured base URL receives `/rules` from the client, so a configured URL such as `http://server:8010/mcp` is requested as `http://server:8010/mcp/rules`.
+
+Copy the example environment file and edit the remote addresses:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+The current `.env.example` contains:
+
+```dotenv
+OLLAMA_MODEL=llama3.2
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+TRANSFORMATION_MCP_URL=http://10.23.1.35:8010/mcp
+VALIDATION_MCP_URL=http://VALIDATION_SERVER_IP:8030/mcp
+DEDUPLICATION_MCP_URL=http://DEDUPLICATION_SERVER_IP:8000/mcp
+```
+
+Replace `VALIDATION_SERVER_IP` and `DEDUPLICATION_SERVER_IP` with the actual IP addresses or DNS names of those remote laptops. Do not leave placeholder values for a remote-MCP-backed run. The transformation address is the known configured endpoint and may also need to be changed if its laptop address changes. Ensure each remote server is listening on its configured port and that its firewall allows requests from the Docker Desktop network.
+
+The `.env` file is intentionally local-only. It is excluded by `.gitignore` and `.dockerignore`; do not commit it or put credentials in the image. If an MCP server later requires authentication, provide credentials through a secret-management mechanism rather than committing them to this repository.
+
+### Build the image
+
+From the repository root, build the local versioned image:
+
+```powershell
+docker build -t financial-rule-agent:1.0.0 .
+```
+
+The build context includes `src/` and `rules/`. The `.dockerignore` excludes local virtual environments, `.env`, `data/`, `outputs/`, logs, caches, Git metadata, and editor files. Therefore, input datasets and generated results are supplied at runtime rather than embedded in the image.
+
+### Run with Docker Compose
+
+The base [`compose.yaml`](compose.yaml) loads `.env`, keeps the CLI interactive, and mounts:
+
+```text
+./data    -> /app/data       read-only
+./outputs -> /app/outputs    read-write
+```
+
+Validate the configuration:
+
+```powershell
+docker compose -f compose.yaml config --quiet
+```
+
+Build and run the application:
+
+```powershell
+docker compose -f compose.yaml build
+docker compose -f compose.yaml run --rm financial-rule-agent
+```
+
+When prompted, enter a path inside the container. For a dataset in the host `data/` directory, use:
+
+```text
+/app/data/your_dataset.csv
+```
+
+Press Enter without a path to use the application's default relative path. For the Compose data mount, the reliable container path is `/app/data/sample_financial_data.csv`.
+
+The application writes these files to the host `outputs/` directory:
+
+```text
+dataset_profile.json
+selected_transformation_rules.json
+selected_validation_rules.json
+selected_deduplication_rules.json
+```
+
+Do not run the full workflow until all three MCP endpoints have been confirmed. If an endpoint is unavailable, the application reports the failure and uses its matching catalog in `rules/`. This fallback is useful for testing but may use stale catalogs in production.
+
+### Development Compose mode
+
+Use the development override when editing in VS Code:
+
+```powershell
+docker compose -f compose.yaml -f compose.dev.yaml config --quiet
+docker compose -f compose.yaml -f compose.dev.yaml run --rm financial-rule-agent
+```
+
+The [`compose.dev.yaml`](compose.dev.yaml) override adds read-only live bind mounts:
+
+```text
+./src   -> /app/src      read-only
+./rules -> /app/rules    read-only
+```
+
+Changes saved in VS Code are visible to the next container run without rebuilding. This is still the same interactive CLI; Compose does not add a web server, daemon, or hot-reload process. Use only `compose.yaml` for a production-style image test without development source and rule mounts.
+
+### Safe validation and testing
+
+Check the image metadata and entry point:
+
+```powershell
+docker image inspect financial-rule-agent:1.0.0 `
+  --format 'User={{.Config.User}} WorkDir={{.Config.WorkingDir}} Cmd={{json .Config.Cmd}}'
+```
+
+The expected values are `appuser`, `/app`, and `["python","-m","src.main"]`.
+
+Verify imports without starting the interactive workflow:
+
+```powershell
+docker run --rm --entrypoint python financial-rule-agent:1.0.0 -c `
+  "import httpx, langchain_ollama, langgraph, pandas, pydantic; print('imports: OK')"
+```
+
+Test Docker-to-host Ollama connectivity:
+
+```powershell
+docker run --rm --entrypoint python financial-rule-agent:1.0.0 -c `
+  "import httpx; r=httpx.get('http://host.docker.internal:11434/api/tags', timeout=5); print(r.status_code); r.raise_for_status()"
+```
+
+For a workflow test, use a synthetic CSV mounted from a temporary host directory and mount a separate temporary output directory. Enter its container path, such as `/app/data/synthetic.csv`. This avoids modifying production datasets or repository outputs. Confirm that all five workflow stages complete and that the four JSON files appear in the temporary output directory.
+
+### Docker Hub publishing
+
+The private image repository is:
+
+```text
+sunaliperera/financial-rule-agent
+```
+
+Log in, tag the local image, and push the immutable `1.0.0` version:
+
+```powershell
+docker login
+docker tag financial-rule-agent:1.0.0 sunaliperera/financial-rule-agent:1.0.0
+docker push sunaliperera/financial-rule-agent:1.0.0
+```
+
+Do not overwrite a published version tag. If a moving `latest` tag is intentionally maintained, create and push it separately:
+
+```powershell
+docker tag financial-rule-agent:1.0.0 sunaliperera/financial-rule-agent:latest
+docker push sunaliperera/financial-rule-agent:latest
+```
+
+### Pull and run on another computer
+
+On another computer with Docker Desktop:
+
+```powershell
+docker login
+docker pull sunaliperera/financial-rule-agent:1.0.0
+docker tag sunaliperera/financial-rule-agent:1.0.0 financial-rule-agent:1.0.0
+```
+
+Clone or copy the repository files needed for runtime configuration, create `.env` from `.env.example`, and provide local `data/` and `outputs/` directories. The existing Compose file refers to the local image name `financial-rule-agent:1.0.0`, so the local tag command above lets it run without rebuilding:
+
+```powershell
+docker compose -f compose.yaml run --rm financial-rule-agent
+```
+
+Alternatively, run the image directly while preserving the CLI and volumes:
+
+```powershell
+docker run --rm -it `
+  --env-file .env `
+  -v "${PWD}\data:/app/data:ro" `
+  -v "${PWD}\outputs:/app/outputs" `
+  financial-rule-agent:1.0.0
+```
+
+On Linux or macOS, use the corresponding host path syntax. Ollama must be reachable at the configured `OLLAMA_BASE_URL`; Docker Desktop provides `host.docker.internal` on Windows and macOS, while Linux users may need to set a reachable host address instead.
+
+### Runtime volume and permission notes
+
+The image creates `/app/data` and `/app/outputs` and runs as `appuser` UID `10001`. Docker Desktop normally permits the bind mounts above, but the host directories must exist and be shared with Docker Desktop. The data mount is read-only so the application cannot modify input CSV files. The outputs mount must be writable because profiling and final rule files are created there.
+
+If output writes fail on Windows, confirm Docker Desktop file sharing, verify that `outputs/` exists, and check the resolved mount configuration:
+
+```powershell
+docker compose -f compose.yaml config
+```
+
+### Security considerations
+
+- Never commit `.env`, real financial datasets, generated customer-specific outputs, or credentials.
+- Use `.env.example` only for non-secret variable names and safe placeholders.
+- Review the dataset profile before sharing it: the profile includes column names and sample values.
+- The selector agents receive the dataset profile and catalog contents through Ollama. Keep Ollama and all MCP traffic on trusted networks, and use HTTPS/authentication when the external services support it.
+- The current MCP clients use HTTP and do not implement authentication. Do not expose the MCP servers publicly without appropriate network controls.
+- The image runs as non-root and does not install Ollama or the external MCP servers.
+- Keep `data/` read-only in Compose and use a separate writable `outputs/` directory.
+- Pin and review dependency changes in `requirements.txt` before rebuilding or publishing.
+
+### Troubleshooting
+
+**`docker: command not found` or the Docker engine is unavailable**
+
+Start Docker Desktop, wait for the engine to become ready, and rerun `docker --version` and `docker compose version`.
+
+**Ollama connection refused or timed out**
+
+Confirm Ollama is running and that `llama3.2` is installed:
+
+```powershell
+ollama list
+ollama run llama3.2
+```
+
+Inside Docker, use `http://host.docker.internal:11434`, not `http://localhost:11434`. Check Windows firewall rules if the connectivity test cannot reach `/api/tags`.
+
+**MCP connection failure**
+
+Check each `*_MCP_URL` in `.env`, confirm the remote laptop IP and port, verify the server's `/mcp/rules` endpoint, and allow inbound traffic through the remote laptop firewall. The application may continue with local fallback catalogs; confirm that this behavior is acceptable before treating the run as successful.
+
+**`Dataset not found`**
+
+The path is resolved inside the container. Use `/app/data/<filename>` for a file in the host `data/` directory, and confirm the file is not excluded from a custom runtime mount.
+
+**Cannot write output files**
+
+Ensure the host `outputs/` directory exists, is writable, and is shared with Docker Desktop. Do not mount it read-only.
+
+**Changes in VS Code are not visible**
+
+Use both Compose files:
+
+```powershell
+docker compose -f compose.yaml -f compose.dev.yaml run --rm financial-rule-agent
+```
+
+The development mounts are not active when only `compose.yaml` is used.
 
 ## License
 
