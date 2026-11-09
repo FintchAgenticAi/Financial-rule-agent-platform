@@ -1,0 +1,33 @@
+[
+  {
+    "rule_id": "DR-001",
+    "name": "Exact-row duplicate detection",
+    "description": "Identify records where every column value is identical.",
+    "applicable_to": ["all"],
+    "parameters": {
+      "comparison": "exact"
+    }
+  },
+  {
+    "rule_id": "DR-002",
+    "name": "Composite-key duplicate detection",
+    "description": "Identify duplicates using selected business-key columns.",
+    "applicable_to": ["structured_data"],
+    "parameters": {
+      "candidate_keys": [
+        "company_name",
+        "transaction_date"
+      ]
+    }
+  },
+  {
+    "rule_id": "DR-003",
+    "name": "Normalized-text duplicate detection",
+    "description": "Compare text after trimming whitespace and normalizing casing.",
+    "applicable_to": ["text"],
+    "parameters": {
+      "normalize_case": true,
+      "trim_whitespace": true
+    }
+  }
+]

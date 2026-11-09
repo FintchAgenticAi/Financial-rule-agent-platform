@@ -1,0 +1,123 @@
+[
+  {
+    "rule": {
+      "rule_id": "VR-001",
+      "name": "Required-value validation",
+      "description": "Reject or flag missing values in required columns.",
+      "applicable_to": [
+        "all"
+      ],
+      "parameters": {
+        "allow_null": false
+      }
+    },
+    "recommended_columns": [
+      "column_name"
+    ],
+    "reason": "The 'Required-value validation' rule is relevant because the 'Year' column contains missing values that need to be addressed.",
+    "confidence": 0.9
+  },
+  {
+    "rule": {
+      "rule_id": "VR-002",
+      "name": "Positive financial value validation",
+      "description": "Check that financial price values are greater than zero.",
+      "applicable_to": [
+        "stock_price",
+        "price"
+      ],
+      "parameters": {
+        "minimum": 0,
+        "exclusive": true
+      }
+    },
+    "recommended_columns": [
+      "Market cap ($B)",
+      "Revenue ($B)",
+      "Earnings ($B)",
+      "Dividend (stock split adjusted) ($)",
+      "Net assets ($B)",
+      "Total assets ($B)",
+      "Total debt ($B)",
+      "Total liabilities ($B)"
+    ],
+    "reason": "The 'Positive financial value validation' rule is relevant because the 'Market cap ($B)', 'Revenue ($B)', 'Earnings ($B)', 'Dividend (stock split adjusted) ($)', 'Net assets ($B)', 'Total assets ($B)', 'Total debt ($B)', and 'Total liabilities ($B)' columns contain financial values that need to be checked for positivity.",
+    "confidence": 0.8
+  },
+  {
+    "rule": {
+      "rule_id": "VR-003",
+      "name": "Valid date validation",
+      "description": "Check whether date values can be parsed as valid dates.",
+      "applicable_to": [
+        "date"
+      ],
+      "parameters": {
+        "reject_invalid": true
+      }
+    },
+    "recommended_columns": [
+      "Year"
+    ],
+    "reason": "The 'Valid date validation' rule is relevant because the 'Year' column contains date values that need to be checked for validity.",
+    "confidence": 0.7
+  },
+  {
+    "rule": {
+      "rule_id": "VR-004",
+      "name": "Currency-code validation",
+      "description": "Check whether currency values use supported ISO-style codes.",
+      "applicable_to": [
+        "currency"
+      ],
+      "parameters": {
+        "allowed_values": [
+          "USD",
+          "EUR",
+          "GBP",
+          "JPY",
+          "LKR"
+        ]
+      }
+    },
+    "recommended_columns": [
+      "Cash on Hand ($B)",
+      "Dividend Yield (%)",
+      "EPS ($)"
+    ],
+    "reason": "The 'Currency-code validation' rule is relevant because the 'Cash on Hand ($B)', 'Dividend Yield (%)', and 'EPS ($)' columns contain currency values that need to be checked for supported ISO-style codes.",
+    "confidence": 0.6
+  },
+  {
+    "rule": {
+      "rule_id": "VR-005",
+      "name": "Financial range validation",
+      "description": "Flag unusually large or negative financial values for review.",
+      "applicable_to": [
+        "numeric"
+      ],
+      "parameters": {
+        "manual_review": true
+      }
+    },
+    "recommended_columns": [
+      "Market cap ($B)",
+      "Revenue ($B)",
+      "Earnings ($B)",
+      "P/E ratio",
+      "P/S ratio",
+      "P/B ratio",
+      "Operating Margin (%)",
+      "EPS ($)",
+      "Shares Outstanding (B)",
+      "Dividend Yield (%)",
+      "Dividend (stock split adjusted) ($)",
+      "Net assets ($B)",
+      "Total assets ($B)",
+      "Total debt ($B)",
+      "Total liabilities ($B)"
+    ],
+    "reason": "The 'Financial range validation' rule is relevant because the 'Market cap ($B)', 'Revenue ($B)', 'Earnings ($B)', 'P/E ratio', 'P/S ratio', 'P/B ratio', 'Operating Margin (%)', 'EPS ($)', 'Shares Outstanding (B)', 'Dividend Yield (%)', 'Dividend (stock split adjusted) ($)', 'Net assets ($B)', 'Total assets ($B)', 'Total debt ($B)', and 'Total liabilities ($B)' columns contain financial values that need to be checked for realism.",
+    "confidence": 0.5
+  }
+]

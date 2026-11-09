@@ -1,0 +1,47 @@
+[
+  {
+    "rule_id": "TR-001",
+    "name": "Trim text whitespace",
+    "description": "Remove leading and trailing spaces from text values.",
+    "applicable_to": ["text"],
+    "parameters": {
+      "operation": "trim"
+    }
+  },
+  {
+    "rule_id": "TR-002",
+    "name": "Standardize text casing",
+    "description": "Convert organization names to title case.",
+    "applicable_to": ["text"],
+    "parameters": {
+      "operation": "title_case"
+    }
+  },
+  {
+    "rule_id": "TR-003",
+    "name": "Uppercase currency codes",
+    "description": "Convert currency codes such as usd and eur to uppercase.",
+    "applicable_to": ["currency"],
+    "parameters": {
+      "operation": "uppercase"
+    }
+  },
+  {
+    "rule_id": "TR-004",
+    "name": "Standardize date format",
+    "description": "Convert supported dates to YYYY-MM-DD.",
+    "applicable_to": ["date"],
+    "parameters": {
+      "target_format": "YYYY-MM-DD"
+    }
+  },
+  {
+    "rule_id": "TR-005",
+    "name": "Convert numeric strings",
+    "description": "Convert numeric text values into decimal numbers.",
+    "applicable_to": ["numeric"],
+    "parameters": {
+      "target_type": "decimal"
+    }
+  }
+]
