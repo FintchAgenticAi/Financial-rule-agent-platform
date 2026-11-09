@@ -101,6 +101,49 @@ You will be prompted to enter a CSV path. If you leave it empty, the app uses:
 data/sample_financial_data.csv
 ```
 
+## Cloudflare R2 Connection Test
+
+The standalone R2 test downloads one CSV from Cloudflare R2 into `data/`. It does
+not start Ollama, contact MCP services, or run the LangGraph workflow.
+
+1. Activate the existing virtual environment in Windows PowerShell:
+
+   ```powershell
+   .\.venv\Scripts\Activate.ps1
+   ```
+
+   Install the dependencies:
+
+   ```powershell
+   python -m pip install -r requirements.txt
+   ```
+
+2. Replace the R2 placeholders in the project-root `.env` with the Cloudflare
+   R2 endpoint, access key, and secret key. Keep the existing Ollama and MCP
+   settings unchanged. The default bucket is
+   `financial-rule-platform-dev`.
+
+3. Manually upload a readable CSV to that R2 bucket using the Cloudflare
+   dashboard or an S3-compatible client. The uploaded object key must exactly
+   match `R2_TEST_OBJECT_KEY` (by default,
+   `datasets/ds-001/sample_financial_data.csv`). Do not use a normal AWS S3 endpoint.
+
+4. Run the independent connection test:
+
+   ```powershell
+   python test_r2_connection.py
+   ```
+
+   A successful run reports the bucket, object key, local filename, byte count,
+   and `R2 connection test PASSED.` The file appears at
+   `data/r2_test_input.csv` by default.
+
+Common failures indicate either placeholder or missing environment variables,
+an incorrect HTTPS R2 endpoint, a missing object key, or insufficient bucket
+permissions. Check that the key matches exactly and that the R2 token permits
+object read and head operations for the configured bucket. Credentials are
+never printed by the test.
+
 ## Example output
 
 The workflow generates three files in the outputs folder:
