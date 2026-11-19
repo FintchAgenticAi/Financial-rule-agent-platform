@@ -11,9 +11,6 @@ from botocore.exceptions import (
     NoCredentialsError,
     ReadTimeoutError,
 )
-from dotenv import load_dotenv
-
-
 class R2ConfigurationError(ValueError):
     """Raised when required R2 settings are missing or still placeholders."""
 
@@ -33,7 +30,6 @@ class R2Service:
     )
 
     def __init__(self) -> None:
-        load_dotenv()
         self.settings = self._load_settings()
         self.client = boto3.client(
             "s3",

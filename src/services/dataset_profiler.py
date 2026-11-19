@@ -54,8 +54,8 @@ def profile_dataset(state: PlatformState) -> PlatformState:
         "columns": column_profiles
     }
 
-    output_folder = Path("outputs")
-    output_folder.mkdir(exist_ok=True)
+    output_folder = Path(state.get("output_dir") or "outputs")
+    output_folder.mkdir(parents=True, exist_ok=True)
 
     output_path = output_folder / "dataset_profile.json"
     with output_path.open("w", encoding="utf-8") as file:

@@ -33,8 +33,8 @@ def create_final_result(
         )
     }
 
-    output_folder = Path("outputs")
-    output_folder.mkdir(exist_ok=True)
+    output_folder = Path(state.get("output_dir") or "outputs")
+    output_folder.mkdir(parents=True, exist_ok=True)
 
     selected_rule_files = {
         "transformation": "selected_transformation_rules.json",
