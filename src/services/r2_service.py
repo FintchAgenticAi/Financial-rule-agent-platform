@@ -1,5 +1,7 @@
 import csv
+import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +19,14 @@ class R2ConfigurationError(ValueError):
 
 class R2DownloadError(RuntimeError):
     """Raised when an R2 download or local CSV validation fails."""
+
+
+class R2UploadError(RuntimeError):
+    """Raised when a JSON upload or upload verification fails."""
+
+
+class R2ValidationError(ValueError):
+    """Raised when an R2 bucket or object key is invalid."""
 
 
 class R2Service:
@@ -106,13 +116,60 @@ class R2Service:
                 "Downloaded file is not a valid CSV."
             ) from error
 
+    def validate_bucket(self, bucket: str) -> None:
+        if not bucket or bucket != self.settings["R2_BUCKET"]:
+            raise R2ValidationError(
+                "Unauthorized R2 bucket. Only the configured bucket is allowed."
+            )
+
+    @staticmethod
+    def validate_identifier(value: str, field_name: str) -> None:
+        if not isinstance(value, str) or not re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}",
+            value,
+        ):
+            raise R2ValidationError(
+                f"Invalid {field_name}. Use 1-128 letters, digits, dots, "
+                "underscores or hyphens."
+            )
+
+    @staticmethod
+    def validate_object_key(
+        object_key: str,
+        *,
+        require_csv: bool = False,
+        require_json: bool = False,
+    ) -> None:
+        if not isinstance(object_key, str) or not object_key:
+            raise R2ValidationError("Invalid R2 object key.")
+        if len(object_key) > 1024:
+            raise R2ValidationError("Invalid R2 object key.")
+        if (
+            object_key.startswith("/")
+            or object_key.endswith("/")
+            or "\\" in object_key
+            or "//" in object_key
+            or any(ord(character) < 32 for character in object_key)
+        ):
+            raise R2ValidationError("Invalid R2 object key.")
+        if any(part == ".." for part in object_key.split("/")):
+            raise R2ValidationError("Invalid R2 object key.")
+        if require_csv and not object_key.lower().endswith(".csv"):
+            raise R2ValidationError("Invalid CSV R2 object key.")
+        if require_json and not object_key.lower().endswith(".json"):
+            raise R2ValidationError("Invalid JSON R2 object key.")
+
     def download_csv(
         self,
         object_key: str | None = None,
         destination_path: str | Path | None = None,
         overwrite: bool = False,
+        bucket: str | None = None,
     ) -> Path:
         key = object_key or self.settings["R2_TEST_OBJECT_KEY"]
+        selected_bucket = bucket or self.settings["R2_BUCKET"]
+        self.validate_bucket(selected_bucket)
+        self.validate_object_key(key, require_csv=True)
         destination = Path(
             destination_path or self.settings["R2_LOCAL_DOWNLOAD_PATH"]
         )
@@ -126,7 +183,7 @@ class R2Service:
             part_path.unlink()
         try:
             self.client.download_file(
-                self.settings["R2_BUCKET"],
+                selected_bucket,
                 key,
                 str(part_path),
             )
@@ -164,6 +221,66 @@ class R2Service:
             if part_path.exists():
                 part_path.unlink()
 
+    def upload_json_file(
+        self,
+        local_path: str | Path,
+        object_key: str,
+        bucket: str | None = None,
+    ) -> dict[str, Any]:
+        selected_bucket = bucket or self.settings["R2_BUCKET"]
+        self.validate_bucket(selected_bucket)
+        self.validate_object_key(object_key, require_json=True)
+
+        path = Path(local_path)
+        if path.suffix.lower() != ".json" or not path.is_file():
+            raise R2UploadError("A readable local JSON file is required.")
+
+        try:
+            with path.open("r", encoding="utf-8") as file:
+                json.load(file)
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise R2UploadError("Local JSON output contains invalid JSON.") from error
+        except OSError as error:
+            raise R2UploadError("Local JSON file could not be read.") from error
+
+        try:
+            with path.open("rb") as file:
+                self.client.put_object(
+                    Bucket=selected_bucket,
+                    Key=object_key,
+                    Body=file.read(),
+                    ContentType="application/json",
+                )
+            return self.head_object(
+                object_key=object_key,
+                bucket=selected_bucket,
+            )
+        except R2UploadError:
+            raise
+        except R2DownloadError as error:
+            raise R2UploadError(
+                f"R2 JSON upload could not be verified: {error}"
+            ) from error
+        except ClientError as error:
+            raise R2UploadError(
+                self._client_error_message(error)
+            ) from error
+        except (
+            ConnectTimeoutError,
+            EndpointConnectionError,
+            ReadTimeoutError,
+            TimeoutError,
+            OSError,
+        ) as error:
+            raise R2UploadError(
+                f"R2 JSON upload failed due to a network or local file error: "
+                f"{type(error).__name__}."
+            ) from error
+        except NoCredentialsError as error:
+            raise R2UploadError(
+                "R2 credentials were rejected or are unavailable."
+            ) from error
+
     @staticmethod
     def _client_error_message(error: ClientError) -> str:
         code = str(error.response.get("Error", {}).get("Code", ""))
@@ -175,11 +292,18 @@ class R2Service:
             return "R2 credentials are invalid."
         return "R2 request failed. Check the endpoint, bucket, and permissions."
 
-    def head_object(self, object_key: str | None = None) -> dict[str, Any]:
+    def head_object(
+        self,
+        object_key: str | None = None,
+        bucket: str | None = None,
+    ) -> dict[str, Any]:
         key = object_key or self.settings["R2_TEST_OBJECT_KEY"]
+        selected_bucket = bucket or self.settings["R2_BUCKET"]
+        self.validate_bucket(selected_bucket)
+        self.validate_object_key(key)
         try:
             return self.client.head_object(
-                Bucket=self.settings["R2_BUCKET"],
+                Bucket=selected_bucket,
                 Key=key,
             )
         except ClientError as error:

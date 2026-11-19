@@ -1,10 +1,12 @@
 import asyncio
 import pandas as pd
+from dotenv import load_dotenv
 
 from src.services.rule_selection_service import run_rule_selection
 
 
 async def run_app() -> None:
+    load_dotenv()
     dataset_path = input("Enter CSV path [sample_financial_data.csv]: ").strip() or "data/sample_financial_data.csv"
 
     try:

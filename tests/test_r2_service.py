@@ -11,6 +11,8 @@ from src.services.r2_service import (
     R2ConfigurationError,
     R2DownloadError,
     R2Service,
+    R2UploadError,
+    R2ValidationError,
 )
 
 
@@ -122,6 +124,56 @@ class R2ServiceTests(unittest.TestCase):
                 service.download_csv(destination_path=destination)
             self.assertFalse(destination.exists())
             self.assertFalse(destination.with_name("x.csv.part").exists())
+
+    def test_successful_json_upload_and_verification(self) -> None:
+        service = self.make_service()
+        self.client.head_object.return_value = {"ContentLength": 2}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "selected_rules.json"
+            path.write_text('[{"rule_id": "TR-001"}]', encoding="utf-8")
+
+            result = service.upload_json_file(
+                path,
+                "rule-results/ds-001/req-001/selected_rules.json",
+                bucket="bucket",
+            )
+
+            self.assertIsInstance(result, dict)
+            self.client.put_object.assert_called_once()
+            call = self.client.put_object.call_args.kwargs
+            self.assertEqual(call["ContentType"], "application/json")
+            self.client.head_object.assert_called_once_with(
+                Bucket="bucket",
+                Key="rule-results/ds-001/req-001/selected_rules.json",
+            )
+
+    def test_invalid_json_upload_is_rejected(self) -> None:
+        service = self.make_service()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "selected_rules.json"
+            path.write_text("{invalid", encoding="utf-8")
+            with self.assertRaises(R2UploadError):
+                service.upload_json_file(
+                    path,
+                    "rule-results/ds-001/req-001/selected_rules.json",
+                )
+            self.client.put_object.assert_not_called()
+
+    def test_unauthorized_bucket_is_rejected(self) -> None:
+        service = self.make_service()
+        with self.assertRaises(R2ValidationError):
+            service.validate_bucket("another-bucket")
+
+    def test_invalid_json_object_key_is_rejected(self) -> None:
+        service = self.make_service()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "selected_rules.json"
+            path.write_text("[]", encoding="utf-8")
+            with self.assertRaises(R2ValidationError):
+                service.upload_json_file(
+                    path,
+                    "../selected_rules.json",
+                )
 
 
 if __name__ == "__main__":

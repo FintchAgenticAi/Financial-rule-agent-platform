@@ -167,6 +167,23 @@ Each file contains the selected rules for one category, for example:
 
 The app does not modify the dataset itself; it only prepares a rule recommendation package for approval.
 
+## Phase 4 REST API
+
+The optional FastAPI boundary exposes `GET /health`, `GET /ready`, and
+`POST /api/v1/rule-selection-requests`. Start it with:
+
+```powershell
+uvicorn src.api:app
+```
+
+The POST request requires a Bearer token matching `RULE_MANAGER_API_TOKEN` and
+the fields `request_id`, `batch_id`, `dataset_id`, `r2_bucket`, `csv_object_key`,
+and `callback_url`. The bucket, object key, and callback destination are
+validated. Job submission is intentionally not configured in Phase 4, so
+normal POST requests return HTTP 503. Tests or future integrations can inject a
+`JobSubmitter` with `create_app(job_submitter=...)`; only an injected submitter
+can return HTTP 202. The DPM-owned results endpoint is not implemented here.
+
 ## Behavior of the agents
 
 Each selector agent uses the dataset profile and the relevant catalog to return JSON in a controlled structure:
