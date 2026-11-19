@@ -41,11 +41,44 @@ class ApiTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.environment.stop()
 
+    def test_openapi_exposes_http_bearer_security(self) -> None:
+        client = TestClient(create_app(AcceptingSubmitter()))
+        openapi = client.get("/openapi.json").json()
+
+        scheme = openapi["components"]["securitySchemes"]["HTTPBearer"]
+        self.assertEqual(scheme["type"], "http")
+        self.assertEqual(scheme["scheme"], "bearer")
+
+        post_operation = openapi["paths"][
+            "/api/v1/rule-selection-requests"
+        ]["post"]
+        status_operation = openapi["paths"][
+            "/api/v1/rule-selection-requests/{request_id}/status"
+        ]["get"]
+        self.assertIn({"HTTPBearer": []}, post_operation["security"])
+        self.assertIn({"HTTPBearer": []}, status_operation["security"])
+
+        health_operation = openapi["paths"]["/health"]["get"]
+        ready_operation = openapi["paths"]["/ready"]["get"]
+        self.assertNotIn("security", health_operation)
+        self.assertNotIn("security", ready_operation)
+
+    def test_invalid_bearer_token_returns_401(self) -> None:
+        client = TestClient(create_app(AcceptingSubmitter()))
+
+        response = client.post(
+            "/api/v1/rule-selection-requests",
+            json=PAYLOAD,
+            headers={"Authorization": "Bearer wrong-token"},
+        )
+
+        self.assertEqual(response.status_code, 401)
+
     def test_health_and_ready(self) -> None:
         client = TestClient(create_app())
 
         self.assertEqual(client.get("/health").status_code, 200)
-        self.assertEqual(client.get("/ready").status_code, 200)
+        self.assertEqual(client.get("/ready").status_code, 503)
 
     def test_default_submitter_returns_service_unavailable(self) -> None:
         client = TestClient(create_app())
@@ -106,6 +139,56 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(
             client.post("/api/v1/rule-selection-results").status_code,
             404,
+        )
+
+    def test_ready_requires_api_token(self) -> None:
+        with patch.dict(os.environ, {"RULE_MANAGER_API_TOKEN": ""}, clear=False):
+            client = TestClient(create_app(AcceptingSubmitter()))
+            response = client.get("/ready")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["detail"], "API is not configured")
+
+    def test_ready_requires_approved_callback(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"RULE_MANAGER_APPROVED_CALLBACK_URL": ""},
+            clear=False,
+        ):
+            client = TestClient(create_app(AcceptingSubmitter()))
+            response = client.get("/ready")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["detail"], "API is not configured")
+
+    def test_ready_rejects_unavailable_database_or_queue(self) -> None:
+        class UnavailableStore:
+            def ping(self) -> None:
+                raise RuntimeError("database unavailable")
+
+        class UnavailableQueue:
+            def ping(self) -> None:
+                raise RuntimeError("queue unavailable")
+
+        class UnavailableInfrastructureSubmitter:
+            store = UnavailableStore()
+            queue = UnavailableQueue()
+
+            def submit(self, request) -> None:
+                raise RuntimeError("unavailable")
+
+        with patch.dict(
+            os.environ,
+            {"JOB_RECOVERY_ENABLED": "true"},
+            clear=False,
+        ):
+            client = TestClient(create_app(UnavailableInfrastructureSubmitter()))
+            response = client.get("/ready")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.json()["detail"],
+            "Durable job acceptance is unavailable",
         )
 
 

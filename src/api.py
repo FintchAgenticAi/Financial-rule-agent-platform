@@ -5,8 +5,21 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Protocol
 
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import (
+    Depends,
+    FastAPI,
+    HTTPException,
+    status,
+)
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+
+from src.jobs.database import (
+    JobDatabaseError,
+    JobIdConflict,
+    JobRecordNotFound,
+    JobStore,
+)
 
 
 _BUCKET_PATTERN = re.compile(
@@ -68,18 +81,24 @@ def _configured_api_token() -> str:
     return os.environ.get("RULE_MANAGER_API_TOKEN", "")
 
 
-def _authenticate(authorization: str | None = Header(default=None)) -> None:
+bearer_security = HTTPBearer(
+    auto_error=False,
+)
+
+
+def _authenticate(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_security),
+) -> None:
     expected = _configured_api_token()
     if not expected:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="API authentication is not configured",
         )
-    scheme, separator, token = (authorization or "").partition(" ")
     if (
-        scheme.lower() != "bearer"
-        or not separator
-        or not hmac.compare_digest(token, expected)
+        credentials is None
+        or credentials.scheme.lower() != "bearer"
+        or not hmac.compare_digest(credentials.credentials, expected)
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -91,6 +110,7 @@ def _authenticate(authorization: str | None = Header(default=None)) -> None:
 def create_app(job_submitter: JobSubmitter | None = None) -> FastAPI:
     app = FastAPI(title="Financial Rule Agent Platform API", version="1.0")
     app.state.job_submitter = job_submitter or UnavailableJobSubmitter()
+    app.state.job_store = getattr(job_submitter, "store", None)
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -103,6 +123,33 @@ def create_app(job_submitter: JobSubmitter | None = None) -> FastAPI:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="API is not configured",
             )
+        submitter = app.state.job_submitter
+        if isinstance(submitter, UnavailableJobSubmitter):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Durable job submission is unavailable",
+            )
+        store = getattr(submitter, "store", None)
+        queue = getattr(submitter, "queue", None)
+        if os.environ.get("JOB_RECOVERY_ENABLED", "false").lower() not in {
+            "1",
+            "true",
+            "yes",
+        }:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Pending-job recovery is not enabled",
+            )
+        if store is not None:
+            try:
+                store.ping()
+                if queue is not None:
+                    queue.ping()
+            except Exception as error:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Durable job acceptance is unavailable",
+                ) from error
         return {"status": "ready"}
 
     @app.post(
@@ -122,6 +169,16 @@ def create_app(job_submitter: JobSubmitter | None = None) -> FastAPI:
 
         try:
             app.state.job_submitter.submit(request)
+        except JobIdConflict as error:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=str(error),
+            ) from error
+        except JobDatabaseError as error:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Durable job persistence is unavailable",
+            ) from error
         except RuntimeError as error:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -129,11 +186,50 @@ def create_app(job_submitter: JobSubmitter | None = None) -> FastAPI:
             ) from error
 
         return {
-            "status": "accepted",
             "request_id": request.request_id,
+            "batch_id": request.batch_id,
+            "dataset_id": request.dataset_id,
+            "status": "queued",
+            "message": "Rule selection request accepted",
         }
+
+    @app.get(
+        "/api/v1/rule-selection-requests/{request_id}/status",
+        dependencies=[Depends(_authenticate)],
+    )
+    def get_rule_selection_status(request_id: str) -> dict:
+        store = app.state.job_store
+        if store is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Job status storage is unavailable",
+            )
+        try:
+            return store.status_payload(request_id)
+        except JobRecordNotFound as error:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Rule selection request not found",
+            ) from error
+        except JobDatabaseError as error:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Job status storage is unavailable",
+            ) from error
 
     return app
 
 
-app = create_app()
+def create_durable_app() -> FastAPI:
+    if os.environ.get("JOB_RECOVERY_ENABLED", "false").lower() not in {
+        "1",
+        "true",
+        "yes",
+    }:
+        return create_app()
+    from src.jobs.submission import DurableJobSubmitter
+
+    return create_app(DurableJobSubmitter())
+
+
+app = create_durable_app()

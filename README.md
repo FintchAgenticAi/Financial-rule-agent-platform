@@ -214,6 +214,79 @@ Before saving the output, the code validates that every selected rule ID exists 
 
 The sample financial dataset in data/sample_financial_data.csv contains examples like company names, transaction dates, prices, currencies, and revenue values to test validation and transformation recommendations.
 
+## Phase 5 durable asynchronous processing
+
+Phase 5 uses SQLite for the persistent job ledger and Redis/RQ for durable queue
+delivery. SQLite is suitable for the supported single-instance deployment.
+Multi-instance API or worker deployments should migrate the job store to
+PostgreSQL and use a shared database URL.
+
+The API transactionally creates a `pending_enqueue` row and commits it before
+attempting Redis enqueue. The RQ job ID is the stable `request_id`, preventing
+duplicate delivery. If Redis is temporarily unavailable, the row remains
+pending and the independent recovery dispatcher retries it; HTTP 202 means
+durably accepted, not that LangGraph processing has started. `/ready` reports
+database, Redis, and recovery availability. No DPM callback is sent in this
+phase.
+
+States exposed by the status endpoint are:
+
+- `pending_enqueue`
+- `queued`
+- `processing`
+- `completed`
+- `failed`
+
+RQ workers execute the existing `process_r2_dataset()` synchronously through
+`asyncio.run()`. Workers use an execution lease and bounded retries. Ollama
+inference is limited by a single RQ worker instance in the supplied Compose
+file. MCP polling remains request-scoped in the existing workflow.
+
+Start the complete local stack:
+
+```powershell
+Copy-Item .env.example .env
+docker compose -f compose.yaml up -d --build
+```
+
+The API is available at `http://localhost:8000`, with Swagger UI at
+`http://localhost:8000/docs`. Redis is internal and is not published to a host
+port.
+
+Stop the stack while retaining Redis and job data:
+
+```powershell
+docker compose -f compose.yaml stop
+```
+
+Stop and remove containers and networks while retaining named volumes:
+
+```powershell
+docker compose -f compose.yaml down
+```
+
+Remove all Phase 5 local data, including the Redis and SQLite volumes:
+
+```powershell
+docker compose -f compose.yaml down -v
+```
+
+The complete API-to-worker live integration test is opt-in and deliberately
+disabled by default:
+
+```dotenv
+RUN_PHASE5_LIVE_INTEGRATION=true
+LIVE_REQUEST_ID=...
+LIVE_BATCH_ID=...
+LIVE_DATASET_ID=...
+LIVE_CSV_OBJECT_KEY=...
+LIVE_PHASE5_TIMEOUT_SECONDS=1800
+```
+
+Do not enable it until Redis, R2, Ollama, and the MCP endpoints have been
+verified for the Docker network. The test is in
+`tests/test_live_phase5_integration.py`.
+
 ## Docker Deployment
 
 The Docker image packages the Python application and the fallback rule catalogs. Ollama and all MCP servers remain external services; they are not installed or started by the image. The container runs the existing interactive CLI entry point:
@@ -222,7 +295,8 @@ The Docker image packages the Python application and the fallback rule catalogs.
 python -m src.main
 ```
 
-The container is not an HTTP API and does not expose a port.
+The Docker image preserves the interactive CLI command and can also run the
+FastAPI server and RQ worker/recovery processes as separate Compose services.
 
 ### Prerequisites
 

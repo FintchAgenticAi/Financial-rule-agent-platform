@@ -8,6 +8,7 @@ services:
       - .env
     stdin_open: true
     tty: true
+    restart: "no"
     volumes:
       - type: bind
         source: ./data
@@ -16,3 +17,97 @@ services:
       - type: bind
         source: ./outputs
         target: /app/outputs
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    volumes:
+      - redis-data:/data
+    expose:
+      - "6379"
+    restart: unless-stopped
+
+  job-init:
+    image: alpine:3.20
+    user: "0:0"
+    command:
+      - sh
+      - -c
+      - mkdir -p /job-state && chown -R 10001:10001 /job-state && chmod 0750 /job-state
+    volumes:
+      - job-state:/job-state
+    restart: "no"
+
+  api:
+    image: financial-rule-agent:1.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
+    env_file:
+      - .env
+    environment:
+      JOB_DATABASE_PATH: /app/job-state/jobs.db
+      JOB_RECOVERY_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+    depends_on:
+      redis:
+        condition: service_started
+      job-init:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    volumes:
+      - job-state:/app/job-state
+    restart: unless-stopped
+
+  worker:
+    image: financial-rule-agent:1.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command:
+      - sh
+      - -c
+      - exec rq worker -u "$REDIS_URL" "$RQ_QUEUE_NAME"
+    env_file:
+      - .env
+    environment:
+      JOB_DATABASE_PATH: /app/job-state/jobs.db
+      JOB_RECOVERY_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+    depends_on:
+      redis:
+        condition: service_started
+      job-init:
+        condition: service_completed_successfully
+    volumes:
+      - job-state:/app/job-state
+    restart: unless-stopped
+
+  recovery:
+    image: financial-rule-agent:1.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["python", "-m", "src.jobs.recovery"]
+    env_file:
+      - .env
+    environment:
+      JOB_DATABASE_PATH: /app/job-state/jobs.db
+      JOB_RECOVERY_ENABLED: "true"
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_started
+      job-init:
+        condition: service_completed_successfully
+    volumes:
+      - job-state:/app/job-state
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  job-state:
